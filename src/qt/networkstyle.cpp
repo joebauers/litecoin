@@ -16,8 +16,8 @@ static const struct {
     const char *titleAddText;
 } network_styles[] = {
     {"main", QAPP_APP_NAME_DEFAULT, 0, 0, ""},
-    {"test", QAPP_APP_NAME_TESTNET, 0, 0, QT_TRANSLATE_NOOP("SplashScreen", "[testnet]")},
-    {"regtest", QAPP_APP_NAME_TESTNET, 60, 1, "[regtest]"}
+    {"test", QAPP_APP_NAME_TESTNET, 0, 0, QT_TRANSLATE_NOOP("SplashScreen", "[RANDOMNFtestnet]")},
+    {"regtest", QAPP_APP_NAME_TESTNET, 60, 1, "[RANDOMNFregtest]"}
 };
 static const unsigned network_styles_count = sizeof(network_styles)/sizeof(*network_styles);
 
