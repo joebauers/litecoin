@@ -17,8 +17,6 @@ extern "C" {
 #include <crypto/common.h>
 #include <crypto/scrypt.h>
 
-// DEBUG
-#include <util.h>
 #include <arith_uint256.h>
 
 static int block_length = 63;
