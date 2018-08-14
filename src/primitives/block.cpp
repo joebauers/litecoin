@@ -81,9 +81,7 @@ uint256 CBlockHeader::GetPoWHash() const
     arith_uint256 ArithYACHash = UintToArith256(yhash);
     arith_uint256 CombinedHash = (ArithLTCHash + ArithYACHash);
 
-    finalhash = ArithToUint256(CombinedHash);
-    LogPrintf("Nfactor = %d\n",GetNfactor());   
-   
+    finalhash = ArithToUint256(CombinedHash);    
 
     return finalhash;
 }
