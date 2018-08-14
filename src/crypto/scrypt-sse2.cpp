@@ -29,7 +29,12 @@
 
 #if defined(USE_SSE2)
 
-#include "crypto/scrypt.h"
+extern "C" {
+#include <crypto/scrypt-jane/scrypt-jane.h>
+}
+
+
+#include <crypto/scrypt.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>

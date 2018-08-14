@@ -463,6 +463,8 @@ int GetSpendHeight(const CCoinsViewCache& inputs);
 
 extern VersionBitsCache versionbitscache;
 
+uint32_t GetMaxBlockSize(int64_t nMedianTimePast);
+
 /**
  * Determine what nVersion a new block should use.
  */

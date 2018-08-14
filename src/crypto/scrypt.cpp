@@ -27,7 +27,13 @@
  * online backup system.
  */
 
-#include "crypto/scrypt.h"
+
+extern "C" {
+#include <crypto/scrypt-jane/scrypt-jane.h>
+}
+
+
+#include <crypto/scrypt.h>
 //#include "util.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -286,6 +292,15 @@ void scrypt_1024_1_1_256_sp_generic(const char *input, char *output, char *scrat
 
 	PBKDF2_SHA256((const uint8_t *)input, 80, B, 128, 1, (uint8_t *)output, 32);
 }
+
+
+void scrypt_jane(const void* password, size_t password_len, const void* salt, size_t salt_len, unsigned char Nfactor,  unsigned char rfactor, unsigned char pfactor,  uint32_t *out, size_t bytes)
+{
+
+ return scrypt((const unsigned char*)password, password_len, (const unsigned char*)salt, salt_len, Nfactor, rfactor, pfactor, (unsigned char*)out, bytes);
+
+}
+
 
 #if defined(USE_SSE2)
 // By default, set to generic scrypt function. This will prevent crash in case when scrypt_detect_sse2() wasn't called

@@ -1149,7 +1149,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
     if (halvings >= 64)
         return 0;
 
-    CAmount nSubsidy = 50 * COIN;
+    CAmount nSubsidy = 100 * COIN;
     // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
     nSubsidy >>= halvings;
     return nSubsidy;
@@ -1703,6 +1703,26 @@ int32_t ComputeBlockVersion(const CBlockIndex* pindexPrev, const Consensus::Para
     }
 
     return nVersion;
+}
+
+// Based on https://github.com/luke-jr/bitcoin/tree/bip-blksize
+
+uint32_t GetMaxBlockSize(int64_t nMedianTimePast) {
+
+    // The first step is on July 22 2018.
+    // After that, one step happens every 2^23 seconds.
+    int64_t step = (nMedianTimePast - 1532288638) >> 23;
+    // Don't do more than 107 steps, to stay under 32 MB.
+    step = std::min<int64_t>(step, 107);
+    // Every step is a 2^(1/16) factor.
+    static const uint32_t bases[16] = {
+        // bases[i] == round(300000 * pow(2.0, i / 16.0))
+        300000, 313282, 327152, 341637,
+        356762, 372557, 389052, 406277,
+        424264, 443048, 462663, 483147,
+        504538, 526876, 550202, 574562
+    };
+    return bases[step & 15] << (step / 16);
 }
 
 /**
@@ -3245,7 +3265,16 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c
     // large by filling up the coinbase witness, which doesn't change
     // the block hash, so we couldn't mark the block as permanently
     // failed).
-    if (GetBlockWeight(block) > MAX_BLOCK_WEIGHT) {
+
+    const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+    const uint32_t maxBlockSize = GetMaxBlockSize(nMedianTimePast);
+    const int64_t nMaxBlockWeight = maxBlockSize * 2;
+
+    if (::GetSerializeSize(block, SER_NETWORK, PROTOCOL_VERSION) > maxBlockSize) {
+        return state.DoS(100, false, REJECT_INVALID, "bad-blk-length", false, "size limits failed");
+    }
+
+    if (GetBlockWeight(block) > nMaxBlockWeight) {
         return state.DoS(100, false, REJECT_INVALID, "bad-blk-weight", false, strprintf("%s : weight limit failed", __func__));
     }
 

@@ -21,6 +21,8 @@
 #ifdef ENABLE_WALLET
 #include <qt/walletframe.h>
 #include <qt/walletmodel.h>
+#include <miner.h>
+#include <rpc/mining.h>
 #endif // ENABLE_WALLET
 
 #ifdef Q_OS_MAC
@@ -33,6 +35,11 @@
 #include <util.h>
 
 #include <iostream>
+#include <chrono>
+#include <thread>
+
+#include <miner.h>
+#include <rpc/mining.h>
 
 #include <QAction>
 #include <QApplication>
@@ -109,6 +116,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     openRPCConsoleAction(0),
     openAction(0),
     showHelpMessageAction(0),
+    minerAction(0),
     trayIcon(0),
     trayIconMenu(0),
     notificator(0),
@@ -123,6 +131,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     if (!restoreGeometry(settings.value("MainWindowGeometry").toByteArray())) {
         // Restore failed (perhaps missing setting), center the window
         move(QApplication::desktop()->availableGeometry().center() - frameGeometry().center());
+    setStyleSheet("selection-color: #000066;");
     }
 
     QString windowTitle = tr(PACKAGE_NAME) + " - ";
@@ -201,6 +210,7 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     labelWalletHDStatusIcon = new QLabel();
     connectionsControl = new GUIUtil::ClickableLabel();
     labelBlocksIcon = new GUIUtil::ClickableLabel();
+    labelMiningIcon = new QLabel();
     if(enableWallet)
     {
         frameBlocksLayout->addStretch();
@@ -211,6 +221,8 @@ BitcoinGUI::BitcoinGUI(const PlatformStyle *_platformStyle, const NetworkStyle *
     }
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(connectionsControl);
+    frameBlocksLayout->addStretch();
+    frameBlocksLayout->addWidget(labelMiningIcon);
     frameBlocksLayout->addStretch();
     frameBlocksLayout->addWidget(labelBlocksIcon);
     frameBlocksLayout->addStretch();
@@ -353,6 +365,12 @@ void BitcoinGUI::createActions()
     encryptWalletAction->setCheckable(true);
     backupWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/filesave"), tr("&Backup Wallet..."), this);
     backupWalletAction->setStatusTip(tr("Backup wallet to another location"));
+
+    minerAction =  new QAction(QIcon(":/icons/tx_mined"), tr("&Yacoin Miner"), this);
+    minerAction->setStatusTip(tr("Yacoin CPU Proof of Work miner"));
+    minerAction->setToolTip(tr("This is the built in CPU Proof of Work miner for Yacoin"));
+    minerAction->setCheckable(true);
+
     changePassphraseAction = new QAction(platformStyle->TextColorIcon(":/icons/key"), tr("&Change Passphrase..."), this);
     changePassphraseAction->setStatusTip(tr("Change the passphrase used for wallet encryption"));
     signMessageAction = new QAction(platformStyle->TextColorIcon(":/icons/edit"), tr("Sign &message..."), this);
@@ -392,12 +410,19 @@ void BitcoinGUI::createActions()
     {
         connect(encryptWalletAction, SIGNAL(triggered(bool)), walletFrame, SLOT(encryptWallet(bool)));
         connect(backupWalletAction, SIGNAL(triggered()), walletFrame, SLOT(backupWallet()));
+        connect(minerAction, SIGNAL(triggered()), this, SLOT(mineYacoins()));
         connect(changePassphraseAction, SIGNAL(triggered()), walletFrame, SLOT(changePassphrase()));
         connect(signMessageAction, SIGNAL(triggered()), this, SLOT(gotoSignMessageTab()));
         connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(gotoVerifyMessageTab()));
         connect(usedSendingAddressesAction, SIGNAL(triggered()), walletFrame, SLOT(usedSendingAddresses()));
         connect(usedReceivingAddressesAction, SIGNAL(triggered()), walletFrame, SLOT(usedReceivingAddresses()));
         connect(openAction, SIGNAL(triggered()), this, SLOT(openClicked()));
+
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(mineYacoins()));
+    timer->start(8000); // check every 8 second
+
+
     }
 #endif // ENABLE_WALLET
 
@@ -438,6 +463,16 @@ void BitcoinGUI::createMenuBar()
         settings->addSeparator();
     }
     settings->addAction(optionsAction);
+
+    QMenu *mining = appMenuBar->addMenu(tr("&Mining"));
+    if(walletFrame)
+    {
+        mining->addSeparator();
+        mining->addAction(minerAction);
+    }
+    settings->addAction(optionsAction);
+
+
 
     QMenu *help = appMenuBar->addMenu(tr("&Help"));
     if(walletFrame)
@@ -712,6 +747,81 @@ void BitcoinGUI::gotoVerifyMessageTab(QString addr)
 {
     if (walletFrame) walletFrame->gotoVerifyMessageTab(addr);
 }
+
+MiningStatus powminer;
+extern uint64_t nHashesPerSec;
+extern uint64_t nHashesDone;
+
+void BitcoinGUI::mineYacoins()
+{
+// We need some logic to not mess with setgenerate RPC miner, but also allow clicking menu
+// item fuctionality. It's safe to assume that nHashesPerSec indicates POW mining is running.
+
+    if ((powminer == POW_RPCRUNNING) && (nHashesPerSec == 0))
+    {
+         powminer = POW_OFF;
+    }
+
+    if ( (!minerAction->isChecked()) && (nHashesPerSec != 0) && (powminer == POW_OFF))
+    {
+         powminer = POW_RPCRUNNING;
+    }
+
+    if ((powminer == POW_ENABLED) && (nHashesPerSec != 0) && (!minerAction->isChecked()) )
+    {
+        nHashesPerSec = 0;
+        powminer = POW_SHUTDOWN;
+    }
+
+    if ( (nHashesPerSec == 0) && (minerAction->isChecked()) )
+    {
+         powminer = POW_STARTED;
+         minerAction->setStatusTip(tr("STARTING CPU MINER"));
+    }
+
+    bool fGenerate;
+        switch(powminer)
+        {
+        case POW_OFF:
+                    minerAction->setStatusTip(tr("CPU MINER IS OFF"));
+                    minerAction->setEnabled(true);
+                    break;
+
+        case POW_ENABLED:
+                    minerAction->setStatusTip(tr("CPU MINER IS RUNNING"));
+                    break;
+
+        case POW_RPCRUNNING:
+                    minerAction->setStatusTip(tr("RPC CONSOLE MINER ALREADY RUNNING"));
+                    minerAction->setEnabled(false);
+                    break;
+
+        case POW_SHUTDOWN:
+                    fGenerate = false;
+                    GenerateYacoins(fGenerate, 0, Params());
+                    gArgs.SoftSetArg("-gen", (fGenerate ? "1" : "0"));
+                    nHashesPerSec = 0;
+                    nHashesDone = 0;
+                    std::this_thread::sleep_for (std::chrono::seconds(2));
+                    powminer = POW_OFF;
+                    minerAction->setStatusTip(tr("CPU MINER IS OFF"));
+                    break;
+
+        case POW_STARTED:
+                    fGenerate = true;
+                    GenerateYacoins(fGenerate, -1, Params());
+                    gArgs.SoftSetArg("-gen", (fGenerate ? "1" : "0"));
+                    powminer = POW_ENABLED;
+                    minerAction->setStatusTip(tr("CPU MINER RUNNING"));
+                    break;
+
+        case POW_ERROR:
+                    break;
+
+        }
+
+}
+
 #endif // ENABLE_WALLET
 
 void BitcoinGUI::updateNetworkState()
@@ -874,7 +984,7 @@ void BitcoinGUI::setNumBlocks(int count, const QDateTime& blockDate, double nVer
 
 void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, bool *ret)
 {
-    QString strTitle = tr("Litecoin"); // default title
+    QString strTitle = tr("RANDOMLitecoin"); // default title
     // Default to information icon
     int nMBoxIcon = QMessageBox::Information;
     int nNotifyIcon = Notificator::Information;
@@ -1065,6 +1175,7 @@ void BitcoinGUI::setEncryptionStatus(int status)
         encryptWalletAction->setChecked(false);
         changePassphraseAction->setEnabled(false);
         encryptWalletAction->setEnabled(true);
+        minerAction->setEnabled(true);
         break;
     case WalletModel::Unlocked:
         labelWalletEncryptionIcon->show();
@@ -1073,14 +1184,16 @@ void BitcoinGUI::setEncryptionStatus(int status)
         encryptWalletAction->setChecked(true);
         changePassphraseAction->setEnabled(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+        minerAction->setEnabled(true);
         break;
     case WalletModel::Locked:
         labelWalletEncryptionIcon->show();
         labelWalletEncryptionIcon->setPixmap(platformStyle->SingleColorIcon(":/icons/lock_closed").pixmap(STATUSBAR_ICONSIZE,STATUSBAR_ICONSIZE));
-        labelWalletEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>locked</b>"));
+        labelWalletEncryptionIcon->setToolTip(tr("Wallet is <b>encrypted</b> and currently <b>locked</b> If you wish to run CPU miner, it will need to be unlocked"));
         encryptWalletAction->setChecked(true);
         changePassphraseAction->setEnabled(true);
         encryptWalletAction->setEnabled(false); // TODO: decrypt currently not supported
+        minerAction->setEnabled(false);
         break;
     }
 }
