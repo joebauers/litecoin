@@ -39,20 +39,20 @@ int CBlockHeader::GetNfactor() const
                   Nfactor = 4;}  // GENESIS
 
 // Possible future implementation
-      else if((lasthashchar == "0") || (lasthashchar == "6") || (lasthashchar == "a")){
-               Nfactor = 22;}
-      else if((lasthashchar == "1") || (lasthashchar == "b")){
-               Nfactor = 21;}
-      else if((lasthashchar == "2") || (lasthashchar == "7") || (lasthashchar == "c")){
-               Nfactor = 20;}
-      else if((lasthashchar == "3") || (lasthashchar == "d")){
-               Nfactor = 19;}
-      else if((lasthashchar == "4") || (lasthashchar == "9") || (lasthashchar == "e")){
-               Nfactor = 20;}
-      else if((lasthashchar == "5") || (lasthashchar == "f")){
-               Nfactor = 21;}
-      else if((lasthashchar == "8")){
-               Nfactor = 22;}
+//      else if((lasthashchar == "0") || (lasthashchar == "6") || (lasthashchar == "a")){
+//               Nfactor = 22;}
+//      else if((lasthashchar == "1") || (lasthashchar == "b")){
+//               Nfactor = 21;}
+//      else if((lasthashchar == "2") || (lasthashchar == "7") || (lasthashchar == "c")){
+//               Nfactor = 20;}
+//      else if((lasthashchar == "3") || (lasthashchar == "d")){
+//               Nfactor = 19;}
+//      else if((lasthashchar == "4") || (lasthashchar == "9") || (lasthashchar == "e")){
+//               Nfactor = 20;}
+//      else if((lasthashchar == "5") || (lasthashchar == "f")){
+//               Nfactor = 21;}
+//      else if((lasthashchar == "8")){
+//               Nfactor = 22;}
 
       return Nfactor;
 }
