@@ -472,6 +472,24 @@ CTAES_DIST += crypto/ctaes/ctaes.h
 CTAES_DIST += crypto/ctaes/README.md
 CTAES_DIST += crypto/ctaes/test.c
 
+JANE_DIST =   crypto/scrypt-jane/scrypt-jane.c
+JANE_DIST +=  crypto/scrypt-jane/scrypt-jane.h
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-conf.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-portable.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-hash.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-hash_sha512.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-pbkdf2.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-romix.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-chacha.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-romix-basic.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-mix_chacha-xop.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-mix_chacha-avx.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-mix_chacha-ssse3.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-mix_chacha-sse2.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-mix_chacha.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-romix-template.h 
+JANE_DIST +=  crypto/scrypt-jane/code/scrypt-jane-test-vectors.h
+
 CLEANFILES = $(EXTRA_LIBRARIES)
 
 CLEANFILES += *.gcda *.gcno
@@ -488,7 +506,7 @@ CLEANFILES += wallet/test/*.gcda wallet/test/*.gcno
 CLEANFILES += zmq/*.gcda zmq/*.gcno
 CLEANFILES += obj/build.h
 
-EXTRA_DIST = $(CTAES_DIST)
+EXTRA_DIST = $(CTAES_DIST) $(JANE_DIST)
 
 
 config/bitcoin-config.h: config/stamp-h1
